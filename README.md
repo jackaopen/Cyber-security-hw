@@ -13,12 +13,16 @@ Cyber-security homework files and DOCX password-recovery experiments.
 │   ├── Cyberser2.py
 │   ├── office2john.py
 │   ├── docxhash.txt
-│   └── docx/
-│       ├── HW0.docx
-│       ├── HW1.docx
-│       ├── HW2.docx
-│       ├── HW3.docx
-│       └── HW4.docx
+│   ├── docx/
+│   │   ├── HW0.docx
+│   │   ├── HW1.docx
+│   │   ├── HW2.docx
+│   │   ├── HW3.docx
+│   │   └── HW4.docx
+│   └── wordlists/
+│       ├── Pwdb_top-1000000.txt
+│       ├── darkweb2017_top-10000.txt
+│       └── myspace.txt
 └── hashcat/
     └── Hashcat executable and dependencies go here
 ```
@@ -37,11 +41,11 @@ From the repository root:
 python src\Cyberser2.py
 ```
 
-The script loops through `HW0.docx` to `HW4.docx`. For each file, it:
+The script processes `HW0.docx`, `HW2.docx`, and `HW3.docx`.
 
-1. Runs `office2john.py`.
-2. Writes the extracted Office hash to `src/docxhash.txt`.
-3. Runs Hashcat in Office 2013 mode (`-m 9600`).
-4. Tests passwords of length 6–8 containing only lowercase English letters and digits.
+### Attack modes
 
-The Hashcat mask uses `?l?d` as its custom character set and the increment range `6` through `8`.
+1. **Mask only:** tests passwords of length 6–8 using lowercase English letters and digits.
+2. **Wordlist + rules:** select one bundled wordlist, all bundled wordlists, or enter a custom path. The default rule file is `hashcat/rules/best64.rule`.
+
+The bundled password lists come from the MIT-licensed [SecLists project](https://github.com/danielmiessler/SecLists).
