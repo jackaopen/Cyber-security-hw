@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Local Hashcat installation, input documents, and recovery results
+/hashcat/
+/src/docx/
+/src/docxhash.txt
+*.potfile
+*.restore
