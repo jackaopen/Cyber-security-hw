@@ -9,6 +9,7 @@ REPO_DIR = SRC_DIR.parent
 JOHN_SCRIPT = SRC_DIR / "office2john.py"
 DOCX_DIR = SRC_DIR / "docx"
 HASH_FILE = SRC_DIR / "docxhash.txt"
+WORDLIST_DIR = SRC_DIR / "wordlists"
 HASHCAT_DIR = REPO_DIR / "hashcat"
 HASHCAT_EXE = HASHCAT_DIR / "hashcat.exe"
 
@@ -38,17 +39,17 @@ def extract_hash(docx_file: Path) -> str:
 
 def run_hashcat(
     attack_mode: str,
-    wordlist: Path = None,
+    wordlists=None,
     rule_file: Path = None,
 ) -> int:
-    command = [
+    base_command = [
         str(HASHCAT_EXE),
         "-m", HASH_MODE,
         str(HASH_FILE),
     ]
 
     if attack_mode == "mask":
-        command += [
+        command = base_command + [
             "-a", "3",
             "-1", CHARSET,
             MASK,
@@ -56,14 +57,70 @@ def run_hashcat(
             "--increment-min", "6",
             "--increment-max", "8",
         ]
-    else:
-        command += [
+        return subprocess.run(command, cwd=HASHCAT_DIR).returncode
+
+    for wordlist in wordlists:
+        print(f"Using wordlist: {wordlist.name}")
+
+        command = base_command + [
             "-a", "0",
             str(wordlist),
             "-r", str(rule_file),
         ]
 
-    return subprocess.run(command, cwd=HASHCAT_DIR).returncode
+        exit_code = subprocess.run(
+            command,
+            cwd=HASHCAT_DIR,
+        ).returncode
+
+        # Hashcat exit code 0 means the hash was cracked.
+        if exit_code == 0:
+            return 0
+
+        # Exit code 1 means this wordlist was exhausted.
+        if exit_code != 1:
+            return exit_code
+
+    return 1
+
+
+def choose_wordlists():
+    included = sorted(WORDLIST_DIR.glob("*.txt"))
+
+    if not included:
+        print(f"No wordlists found in {WORDLIST_DIR}")
+        return None
+
+    print("\nAvailable wordlists:")
+    print("0. All included wordlists")
+
+    for number, wordlist in enumerate(included, start=1):
+        print(f"{number}. {wordlist.name}")
+
+    choice = input(
+        "Choose a number, press Enter for all, "
+        "or enter a custom path: "
+    ).strip().strip('"')
+
+    if choice in ("", "0"):
+        return included
+
+    if choice.isdigit():
+        number = int(choice)
+
+        if 1 <= number <= len(included):
+            return [included[number - 1]]
+
+        print("Invalid wordlist number")
+        return None
+
+    custom_wordlist = Path(choice).expanduser().resolve()
+
+    if not custom_wordlist.is_file():
+        print(f"Missing wordlist: {custom_wordlist}")
+        return None
+
+    return [custom_wordlist]
 
 
 def choose_attack():
@@ -80,8 +137,10 @@ def choose_attack():
         print("Invalid option")
         return None, None, None
 
-    wordlist_text = input("Wordlist path: ").strip().strip('"')
-    wordlist = Path(wordlist_text).expanduser().resolve()
+    wordlists = choose_wordlists()
+
+    if wordlists is None:
+        return None, None, None
 
     default_rule = HASHCAT_DIR / "rules" / "best64.rule"
     rule_text = input(f"Rule file [{default_rule}]: ").strip().strip('"')
@@ -91,15 +150,11 @@ def choose_attack():
         else default_rule
     )
 
-    if not wordlist.is_file():
-        print(f"Missing wordlist: {wordlist}")
-        return None, None, None
-
     if not rule_file.is_file():
         print(f"Missing rule file: {rule_file}")
         return None, None, None
 
-    return "rules", wordlist, rule_file
+    return "rules", wordlists, rule_file
 
 
 def main() -> None:
@@ -111,7 +166,7 @@ def main() -> None:
         print(f"Missing file: {HASHCAT_EXE}")
         return
 
-    attack_mode, wordlist, rule_file = choose_attack()
+    attack_mode, wordlists, rule_file = choose_attack()
 
     if attack_mode is None:
         return
@@ -136,7 +191,7 @@ def main() -> None:
 
         exit_code = run_hashcat(
             attack_mode,
-            wordlist,
+            wordlists,
             rule_file,
         )
         print(f"Hashcat finished with exit code {exit_code}")
