@@ -61,8 +61,8 @@ def main() -> None:
         print(f"Missing file: {HASHCAT_EXE}")
         return
 
-    for number in range(5):
-        docx_file = DOCX_DIR / f"HW{number}.docx"
+    for hw in [0, 2, 3]:
+        docx_file = DOCX_DIR / f"HW{hw}.docx"
 
         if not docx_file.exists():
             print(f"Skip: {docx_file.name} was not found")
