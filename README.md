@@ -10,6 +10,7 @@ Cyber-security homework files and DOCX password-recovery experiments.
 .
 ├── README.md
 ├── src/
+│   ├── Cyberser2.py
 │   ├── office2john.py
 │   ├── docxhash.txt
 │   └── docx/
@@ -22,26 +23,25 @@ Cyber-security homework files and DOCX password-recovery experiments.
     └── Hashcat executable and dependencies go here
 ```
 
-`Cyberser2.py` will be added after its code review.
-
 ## Requirements
 
 - Python 3
 - `olefile`: `pip install olefile`
 - Hashcat for Windows, extracted into `hashcat/`
 
-## DOCX Password-Recovery Flow
+## Run
 
-1. Extract the Office password hash:
-
-```powershell
-python src\office2john.py src\docx\HW0.docx > src\docxhash.txt
-```
-
-2. Run Hashcat from the repository root:
+From the repository root:
 
 ```powershell
-.\hashcat\hashcat.exe -m 9600 src\docxhash.txt -a 3 ?1?1?1?1?1?1 --custom-charset1=?l?d
+python src\Cyberser2.py
 ```
 
-The example mask tests six-character passwords containing lowercase English letters and digits. Change the mask only for your own authorized files.
+The script loops through `HW0.docx` to `HW4.docx`. For each file, it:
+
+1. Runs `office2john.py`.
+2. Writes the extracted Office hash to `src/docxhash.txt`.
+3. Runs Hashcat in Office 2013 mode (`-m 9600`).
+4. Tests passwords of length 6–8 containing only lowercase English letters and digits.
+
+The Hashcat mask uses `?l?d` as its custom character set and the increment range `6` through `8`.
