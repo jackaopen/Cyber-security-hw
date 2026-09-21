@@ -36,20 +36,70 @@ def extract_hash(docx_file: Path) -> str:
     return output.split(":", 1)[1]
 
 
-def run_hashcat() -> int:
+def run_hashcat(
+    attack_mode: str,
+    wordlist: Path = None,
+    rule_file: Path = None,
+) -> int:
     command = [
         str(HASHCAT_EXE),
         "-m", HASH_MODE,
         str(HASH_FILE),
-        "-a", "3",
-        "-1", CHARSET,
-        MASK,
-        "--increment",
-        "--increment-min", "6",
-        "--increment-max", "8",
     ]
 
+    if attack_mode == "mask":
+        command += [
+            "-a", "3",
+            "-1", CHARSET,
+            MASK,
+            "--increment",
+            "--increment-min", "6",
+            "--increment-max", "8",
+        ]
+    else:
+        command += [
+            "-a", "0",
+            str(wordlist),
+            "-r", str(rule_file),
+        ]
+
     return subprocess.run(command, cwd=HASHCAT_DIR).returncode
+
+
+def choose_attack():
+    print("\nChoose attack mode:")
+    print("1. Mask only (6-8 lowercase letters or digits)")
+    print("2. Wordlist + rules")
+
+    choice = input("Option: ").strip()
+
+    if choice == "1":
+        return "mask", None, None
+
+    if choice != "2":
+        print("Invalid option")
+        return None, None, None
+
+    wordlist_text = input("Wordlist path: ").strip().strip('"')
+    wordlist = Path(wordlist_text).expanduser().resolve()
+
+    default_rule = HASHCAT_DIR / "rules" / "best64.rule"
+    rule_text = input(f"Rule file [{default_rule}]: ").strip().strip('"')
+    rule_file = (
+        Path(rule_text).expanduser().resolve()
+        if rule_text
+        else default_rule
+    )
+
+    if not wordlist.is_file():
+        print(f"Missing wordlist: {wordlist}")
+        return None, None, None
+
+    if not rule_file.is_file():
+        print(f"Missing rule file: {rule_file}")
+        return None, None, None
+
+    return "rules", wordlist, rule_file
 
 
 def main() -> None:
@@ -59,6 +109,11 @@ def main() -> None:
 
     if not HASHCAT_EXE.exists():
         print(f"Missing file: {HASHCAT_EXE}")
+        return
+
+    attack_mode, wordlist, rule_file = choose_attack()
+
+    if attack_mode is None:
         return
 
     for hw in [0, 2, 3]:
@@ -79,7 +134,11 @@ def main() -> None:
         HASH_FILE.write_text(office_hash + "\n", encoding="utf-8")
         print(f"Hash written to {HASH_FILE.name}")
 
-        exit_code = run_hashcat()
+        exit_code = run_hashcat(
+            attack_mode,
+            wordlist,
+            rule_file,
+        )
         print(f"Hashcat finished with exit code {exit_code}")
 
 
